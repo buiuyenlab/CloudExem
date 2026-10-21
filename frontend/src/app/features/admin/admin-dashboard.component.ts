@@ -164,16 +164,8 @@ export class AdminDashboardComponent implements OnInit {
         this.users.set(data || []);
         this.filterUsers();
       },
-      error: () => {
-        // Fallback demo accounts
-        const demo: UserProfile[] = [
-          { id: '00000000-0000-0000-0000-000000000001', full_name: 'Quản Trị Viên Hệ Thống', email: 'admin@cloudexam.edu.vn', role: 'admin', status: 'active' },
-          { id: '00000000-0000-0000-0000-000000000002', full_name: 'ThS. Nguyễn Văn Thầy', email: 'teacher@cloudexam.edu.vn', role: 'teacher', status: 'active' },
-          { id: '00000000-0000-0000-0000-000000000003', full_name: 'Trần Văn Sinh Viên', email: 'student1@cloudexam.edu.vn', role: 'student', status: 'active' },
-          { id: '00000000-0000-0000-0000-000000000004', full_name: 'Lê Thị Thu Thảo', email: 'student2@cloudexam.edu.vn', role: 'student', status: 'active' }
-        ];
-        this.users.set(demo);
-        this.filterUsers();
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể tải danh sách người dùng từ hệ thống.');
       }
     });
   }
@@ -181,10 +173,8 @@ export class AdminDashboardComponent implements OnInit {
   loadAuditLogs(): void {
     this.api.get<any[]>('/admin/audit-logs').subscribe({
       next: data => this.auditLogs.set(data || []),
-      error: () => {
-        this.auditLogs.set([
-          { action: 'UPDATE_USER_ROLE', profiles: { full_name: 'Quản Trị Viên' }, metadata: { new_role: 'teacher' }, created_at: new Date().toISOString() }
-        ]);
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể tải nhật ký hệ thống.');
       }
     });
   }
@@ -208,10 +198,8 @@ export class AdminDashboardComponent implements OnInit {
         this.toast.success(`Đã ${nextStatus === 'active' ? 'mở khóa' : 'khóa'} tài khoản.`);
         this.loadUsers();
       },
-      error: () => {
-        user.status = nextStatus;
-        this.toast.success(`Đã cập nhật trạng thái người dùng.`);
-        this.filterUsers();
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể cập nhật trạng thái người dùng.');
       }
     });
   }
@@ -222,11 +210,9 @@ export class AdminDashboardComponent implements OnInit {
         this.toast.success(`Đã cập nhật vai trò thành ${newRole}.`);
         this.loadUsers();
       },
-      error: () => {
-        const u = this.users().find(x => x.id === userId);
-        if (u) u.role = newRole;
-        this.toast.success(`Đã cập nhật vai trò.`);
-        this.filterUsers();
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể cập nhật phân quyền người dùng.');
+        this.loadUsers();
       }
     });
   }

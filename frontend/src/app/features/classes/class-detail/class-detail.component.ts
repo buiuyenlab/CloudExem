@@ -110,22 +110,8 @@ export class ClassDetailComponent implements OnInit {
         this.classData.set(data);
         this.loadMembers(id);
       },
-      error: () => {
-        // Fallback demo data
-        this.classData.set({
-          id,
-          name: 'Điện Toán Đám Mây - Cloud Computing 2026',
-          description: 'Lớp học nguyên lý đám mây, AWS, GCP, Vercel và Serverless',
-          join_code: 'CLOUD26',
-          teacher_id: '00000000-0000-0000-0000-000000000002',
-          status: 'active',
-          created_at: new Date().toISOString(),
-          profiles: { full_name: 'ThS. Nguyễn Văn Thầy' }
-        });
-        this.members.set([
-          { profiles: { full_name: 'Trần Văn Sinh Viên' }, joined_at: new Date().toISOString() },
-          { profiles: { full_name: 'Lê Thị Thu Thảo' }, joined_at: new Date().toISOString() }
-        ]);
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể tải thông tin lớp học.');
       }
     });
   }
@@ -133,7 +119,9 @@ export class ClassDetailComponent implements OnInit {
   loadMembers(classId: string): void {
     this.api.get<any[]>(`/classes/${classId}/members`).subscribe({
       next: data => this.members.set(data || []),
-      error: () => {}
+      error: () => {
+        this.members.set([]);
+      }
     });
   }
 

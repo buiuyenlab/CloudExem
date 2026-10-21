@@ -92,17 +92,8 @@ export class ExamGradebookComponent implements OnInit {
         this.examInfo.set(data.exam);
         this.results.set(data.results || []);
       },
-      error: () => {
-        // Fallback demo data
-        this.examInfo.set({
-          title: 'Kiểm Tra Giữa Kỳ - Kiến Trúc Cloud & Serverless',
-          class_name: 'Điện Toán Đám Mây 2026',
-          pass_score: 5.0
-        });
-        this.results.set([
-          { student_name: 'Trần Văn Sinh Viên', attempt_number: 1, score: 10.0, total_points: 10.0, is_passed: 'Đạt', status: 'Đã nộp bài', submitted_at: '21/10/2026 20:30' },
-          { student_name: 'Lê Thị Thu Thảo', attempt_number: 1, score: 7.5, total_points: 10.0, is_passed: 'Đạt', status: 'Đã nộp bài', submitted_at: '21/10/2026 20:15' }
-        ]);
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể tải bảng điểm kỳ thi.');
       }
     });
   }
@@ -118,16 +109,8 @@ export class ExamGradebookComponent implements OnInit {
         window.URL.revokeObjectURL(url);
         this.toast.success('Đã tải xuống file CSV bảng điểm!');
       },
-      error: () => {
-        // Create client-side CSV download fallback for demo
-        const csvContent = '\uFEFF"Họ và Tên","Lần thi","Điểm số","Tổng điểm","Kết quả"\r\n"Trần Văn Sinh Viên","1","10.0","10.0","Đạt"\r\n"Lê Thị Thu Thảo","1","7.5","10.0","Đạt"';
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `BangDiem_CloudExam.csv`;
-        a.click();
-        this.toast.success('Đã tải xuống file CSV bảng điểm thành công!');
+      error: (err) => {
+        this.toast.error('Không thể xuất file CSV từ máy chủ.');
       }
     });
   }

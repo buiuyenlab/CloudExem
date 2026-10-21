@@ -190,40 +190,8 @@ export class BankDetailComponent implements OnInit {
   loadQuestions(): void {
     this.api.get<Question[]>(`/question-banks/${this.bankId}/questions`).subscribe({
       next: data => this.questions.set(data || []),
-      error: () => {
-        // Fallback demo questions
-        this.questions.set([
-          {
-            id: '33333333-3333-3333-3333-333333333301',
-            bank_id: this.bankId,
-            question_type: 'single_choice',
-            content: 'Mô hình nào sau đây cho phép nhà phát triển chạy code backend mà không cần quản lý máy chủ vật lý hay container liên tục?',
-            options: [
-              { id: 'opt_a', text: 'IaaS (Infrastructure as a Service)' },
-              { id: 'opt_b', text: 'Serverless Functions / FaaS' },
-              { id: 'opt_c', text: 'Dedicated Bare-metal Server' },
-              { id: 'opt_d', text: 'Local VirtualBox' }
-            ],
-            correct_answers: ['opt_b'],
-            difficulty: 'easy',
-            default_points: 2.5
-          },
-          {
-            id: '33333333-3333-3333-3333-333333333302',
-            bank_id: this.bankId,
-            question_type: 'multiple_choice',
-            content: 'Những thành phần nào sau đây thuộc giải pháp cơ sở dữ liệu và bảo mật do Supabase cung cấp? (Chọn tất cả đáp án đúng)',
-            options: [
-              { id: 'opt_a', text: 'PostgreSQL Database Engine' },
-              { id: 'opt_b', text: 'Row Level Security (RLS)' },
-              { id: 'opt_c', text: 'Hadoop HDFS cluster' },
-              { id: 'opt_d', text: 'Built-in JWT Authentication' }
-            ],
-            correct_answers: ['opt_a', 'opt_b', 'opt_d'],
-            difficulty: 'medium',
-            default_points: 2.5
-          }
-        ]);
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể tải danh sách câu hỏi.');
       }
     });
   }

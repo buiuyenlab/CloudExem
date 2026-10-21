@@ -106,15 +106,8 @@ export class BankListComponent implements OnInit {
   loadBanks(): void {
     this.api.get<QuestionBank[]>('/question-banks').subscribe({
       next: data => this.banks.set(data || []),
-      error: () => {
-        this.banks.set([
-          {
-            id: '22222222-2222-2222-2222-222222222221',
-            name: 'Ngân Hàng Kiến Trúc Đám Mây & Serverless',
-            description: 'Bộ câu hỏi trắc nghiệm kiến thức cốt lõi về Cloud, Vercel, Supabase',
-            created_at: new Date().toISOString()
-          }
-        ]);
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'Không thể tải danh sách ngân hàng câu hỏi.');
       }
     });
   }
