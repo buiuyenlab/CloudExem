@@ -59,11 +59,11 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- 4. PREVENT PRIVILEGE ESCALATION TRIGGER
+-- Restricts role and status modification when called by client authenticated sessions (auth.uid() is not null)
 CREATE OR REPLACE FUNCTION check_profile_update()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Only admin can change role or status
-    IF NOT is_admin() THEN
+    IF auth.uid() IS NOT NULL AND NOT is_admin() THEN
         IF OLD.role IS DISTINCT FROM NEW.role THEN
             RAISE EXCEPTION 'Only administrators can modify user roles.';
         END IF;
@@ -196,18 +196,15 @@ DECLARE
     v_deadline TIMESTAMPTZ;
     v_now TIMESTAMPTZ := NOW();
 BEGIN
-    -- 1. Fetch exam with row lock
     SELECT * INTO v_exam FROM exams WHERE id = p_exam_id FOR UPDATE;
     IF NOT FOUND THEN
         RETURN jsonb_build_object('success', false, 'message', 'Kỳ thi không tồn tại.');
     END IF;
 
-    -- 2. Verify status
     IF v_exam.status <> 'published' THEN
         RETURN jsonb_build_object('success', false, 'message', 'Kỳ thi chưa được xuất bản hoặc đã kết thúc.');
     END IF;
 
-    -- 3. Verify date window
     IF v_now < v_exam.start_at THEN
         RETURN jsonb_build_object('success', false, 'message', 'Kỳ thi chưa đến giờ bắt đầu.');
     END IF;
@@ -216,7 +213,6 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', 'Kỳ thi đã kết thúc thời gian mở.');
     END IF;
 
-    -- 4. Check if student is member of class
     IF NOT EXISTS (
         SELECT 1 FROM class_members 
         WHERE class_id = v_exam.class_id AND student_id = p_student_id
@@ -224,18 +220,15 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', 'Bạn chưa tham gia lớp học có kỳ thi này.');
     END IF;
 
-    -- 5. Check if there is an in_progress attempt
     SELECT * INTO v_active_attempt 
     FROM exam_attempts 
     WHERE exam_id = p_exam_id AND student_id = p_student_id AND status = 'in_progress'
     ORDER BY attempt_number DESC LIMIT 1;
 
     IF FOUND THEN
-        -- If already expired, auto timeout it
         IF v_now > v_active_attempt.deadline_at + INTERVAL '30 seconds' THEN
             UPDATE exam_attempts SET status = 'timed_out' WHERE id = v_active_attempt.id;
         ELSE
-            -- Return active attempt to resume
             RETURN jsonb_build_object(
                 'success', true, 
                 'resumed', true,
@@ -244,7 +237,6 @@ BEGIN
         END IF;
     END IF;
 
-    -- 6. Count total previous attempts
     SELECT COUNT(*) INTO v_attempt_count 
     FROM exam_attempts 
     WHERE exam_id = p_exam_id AND student_id = p_student_id;
@@ -253,11 +245,8 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', 'Bạn đã sử dụng hết số lần làm bài cho phép (' || v_exam.max_attempts || ' lần).');
     END IF;
 
-    -- 7. Calculate server-enforced deadline
-    -- Deadline is the earlier of: started_at + duration_minutes OR exam.end_at
     v_deadline := LEAST(v_now + (v_exam.duration_minutes || ' minutes')::INTERVAL, v_exam.end_at);
 
-    -- 8. Insert new attempt
     INSERT INTO exam_attempts (
         exam_id,
         student_id,
@@ -283,4 +272,3 @@ BEGIN
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-

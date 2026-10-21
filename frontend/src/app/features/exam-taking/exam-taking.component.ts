@@ -407,65 +407,10 @@ export class ExamTakingComponent implements OnInit, OnDestroy {
         this.remainingSeconds.set(seconds);
         this.startCountdown();
       },
-      error: () => {
-        // Fallback demo questions if mock attempt
-        this.questions.set([
-          {
-            id: '33333333-3333-3333-3333-333333333301',
-            bank_id: '',
-            question_type: 'single_choice',
-            content: 'Mô hình nào sau đây cho phép nhà phát triển chạy code backend mà không cần quản lý máy chủ vật lý hay container liên tục?',
-            options: [
-              { id: 'opt_a', text: 'IaaS (Infrastructure as a Service)' },
-              { id: 'opt_b', text: 'Serverless Functions / FaaS' },
-              { id: 'opt_c', text: 'Dedicated Bare-metal Server' },
-              { id: 'opt_d', text: 'Local VirtualBox' }
-            ],
-            difficulty: 'easy',
-            default_points: 2.5
-          },
-          {
-            id: '33333333-3333-3333-3333-333333333302',
-            bank_id: '',
-            question_type: 'multiple_choice',
-            content: 'Những thành phần nào sau đây thuộc giải pháp cơ sở dữ liệu và bảo mật do Supabase cung cấp? (Chọn tất cả đáp án đúng)',
-            options: [
-              { id: 'opt_a', text: 'PostgreSQL Database Engine' },
-              { id: 'opt_b', text: 'Row Level Security (RLS)' },
-              { id: 'opt_c', text: 'Hadoop HDFS cluster' },
-              { id: 'opt_d', text: 'Built-in JWT Authentication' }
-            ],
-            difficulty: 'medium',
-            default_points: 2.5
-          },
-          {
-            id: '33333333-3333-3333-3333-333333333303',
-            bank_id: '',
-            question_type: 'true_false',
-            content: 'Trong kiến trúc Vercel Serverless Function, các biến lưu trong bộ nhớ RAM của một request sẽ được duy trì vĩnh viễn cho tất cả các user truy cập sau đó. Đúng hay Sai?',
-            options: [
-              { id: 'opt_t', text: 'Đúng' },
-              { id: 'opt_f', text: 'Sai' }
-            ],
-            difficulty: 'easy',
-            default_points: 2.5
-          },
-          {
-            id: '33333333-3333-3333-3333-333333333304',
-            bank_id: '',
-            question_type: 'single_choice',
-            content: 'Cơ chế bảo mật nào trên PostgreSQL đảm bảo người dùng chỉ được xem dòng dữ liệu thuộc quyền sở hữu của họ ngay cả khi truy vấn SELECT * FROM table?',
-            options: [
-              { id: 'opt_a', text: 'Foreign Key Constraints' },
-              { id: 'opt_b', text: 'Row Level Security (RLS)' },
-              { id: 'opt_c', text: 'Database Indexing B-Tree' },
-              { id: 'opt_d', text: 'Table Partitioning' }
-            ],
-            difficulty: 'medium',
-            default_points: 2.5
-          }
-        ]);
-        this.startCountdown();
+      error: err => {
+        const msg = err?.error?.message || 'Không thể tải bài thi. Vui lòng thử lại.';
+        this.toast.error(msg);
+        this.router.navigate(['/exams']);
       }
     });
   }
@@ -561,14 +506,15 @@ export class ExamTakingComponent implements OnInit, OnDestroy {
     this.api.post<any>(`/attempts/${this.attemptId}/submit`, {}).subscribe({
       next: () => {
         this.isSubmitModalOpen = false;
-        this.toast.success('Đã nộp bài thi thành công!');
+        this.isSubmitting = false;
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.toast.success('Đã nộp bài thi thành công! Đang chấm điểm...');
         this.router.navigate(['/results/attempts', this.attemptId]);
       },
-      error: () => {
-        // Fallback for demo mode
-        this.isSubmitModalOpen = false;
-        this.toast.success('Đã nộp bài thi thành công (Chế độ demo)!');
-        this.router.navigate(['/results/attempts', this.attemptId]);
+      error: err => {
+        this.isSubmitting = false;
+        const msg = err?.error?.message || 'Lỗi khi nộp bài. Vui lòng thử lại.';
+        this.toast.error(msg);
       }
     });
   }

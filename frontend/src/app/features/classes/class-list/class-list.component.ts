@@ -168,19 +168,7 @@ export class ClassListComponent implements OnInit {
     this.api.get<ClassItem[]>('/classes').subscribe({
       next: data => this.classes.set(data || []),
       error: err => {
-        // Fallback demo classes if offline
-        this.classes.set([
-          {
-            id: '11111111-1111-1111-1111-111111111111',
-            name: 'Điện Toán Đám Mây - Cloud Computing 2026',
-            description: 'Lớp học nguyên lý đám mây, AWS, GCP, Vercel và Serverless',
-            join_code: 'CLOUD26',
-            teacher_id: '00000000-0000-0000-0000-000000000002',
-            status: 'active',
-            created_at: new Date().toISOString(),
-            profiles: { full_name: 'ThS. Nguyễn Văn Thầy' }
-          }
-        ]);
+        this.toast.error('Không thể tải danh sách lớp học. Vui lòng thử lại.');
       }
     });
   }

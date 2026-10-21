@@ -1,7 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-result-view',
@@ -13,28 +14,45 @@ import { ApiService } from '../../../core/services/api.service';
         <a routerLink="/dashboard" class="text-sm text-primary-600 font-semibold">&larr; Quay lại trang chính</a>
       </div>
 
+      <!-- Loading state -->
+      <div *ngIf="isLoading()" class="card text-center p-8">
+        <div class="loading-spinner mx-auto mb-3"></div>
+        <p class="text-muted text-sm">Đang tải kết quả...</p>
+      </div>
+
+      <!-- Error state -->
+      <div *ngIf="!isLoading() && !result()" class="card text-center p-8">
+        <div class="text-4xl mb-3">⚠️</div>
+        <h3 class="font-bold text-slate-700">Không thể tải kết quả</h3>
+        <p class="text-sm text-muted mt-1">Vui lòng thử lại hoặc liên hệ giảng viên.</p>
+        <button (click)="loadResult()" class="btn btn-primary btn-sm mt-4">Thử lại</button>
+      </div>
+
       <!-- Result Banner Card -->
-      <div class="card result-banner mb-6">
+      <div *ngIf="!isLoading() && result()" class="card result-banner mb-6">
         <div class="banner-content">
           <div class="score-circle" [class.passed]="result()?.is_passed">
-            <span class="score-number">{{ result()?.score ?? 10.0 }}</span>
-            <span class="score-total">/ {{ result()?.total_points ?? 10.0 }}</span>
+            <span class="score-number">{{ result()?.score | number:'1.1-1' }}</span>
+            <span class="score-total">/ {{ result()?.total_points | number:'1.1-1' }}</span>
           </div>
 
           <div class="banner-info">
-            <span class="badge" [ngClass]="(result()?.is_passed ?? true) ? 'badge-success' : 'badge-danger'">
-              {{ (result()?.is_passed ?? true) ? 'ĐẠT KỲ THI' : 'CHƯA ĐẠT' }}
+            <span class="badge" [ngClass]="result()?.is_passed ? 'badge-success' : 'badge-danger'">
+              {{ result()?.is_passed ? 'ĐẠT KỲ THI' : 'CHƯA ĐẠT' }}
             </span>
-            <h1 class="text-2xl font-bold mt-2">{{ result()?.exam_title || 'Kiểm Tra Giữa Kỳ - Kiến Trúc Cloud' }}</h1>
+            <h1 class="text-2xl font-bold mt-2">{{ result()?.exam_title || 'Kỳ thi' }}</h1>
             <p class="text-sm text-slate-500 mt-1">
-              Thí sinh: <strong>{{ result()?.student_name || 'Học viên' }}</strong> •
-              Điểm đạt yêu cầu: {{ result()?.pass_score ?? 5.0 }} điểm
+              Thí sinh: <strong>{{ result()?.student_name || '—' }}</strong> •
+              Điểm đạt yêu cầu: {{ result()?.pass_score }} điểm
             </p>
+            <div class="result-meta mt-2">
+              <span class="text-xs text-muted">Số câu đúng: {{ result()?.correct_count ?? '—' }} / {{ result()?.total_questions ?? '—' }}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Review Section -->
+      <!-- Review Section (only when answers are released) -->
       <div *ngIf="result()?.answers_released" class="review-section">
         <h3 class="font-bold text-lg mb-4">Chi tiết bài làm và đáp án chuẩn</h3>
 
@@ -67,7 +85,7 @@ import { ApiService } from '../../../core/services/api.service';
         </div>
       </div>
 
-      <div *ngIf="!result()?.answers_released" class="card text-center p-6 text-muted">
+      <div *ngIf="result() && !result()?.answers_released" class="card text-center p-6 text-muted">
         <p>🔒 Chi tiết đáp án và bài giải sẽ được công bố sau khi kỳ thi kết thúc theo quy định.</p>
       </div>
     </div>
@@ -75,6 +93,14 @@ import { ApiService } from '../../../core/services/api.service';
   styles: [`
     .mb-4 { margin-bottom: 1rem; }
     .mb-6 { margin-bottom: 1.5rem; }
+    .loading-spinner {
+      width: 2rem; height: 2rem;
+      border: 3px solid var(--slate-200);
+      border-top-color: var(--primary-600);
+      border-radius: 9999px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .result-banner {
       background: linear-gradient(135deg, white 0%, var(--primary-50) 100%);
       padding: 2.5rem 2rem;
@@ -95,6 +121,7 @@ import { ApiService } from '../../../core/services/api.service';
       align-items: center;
       justify-content: center;
       box-shadow: var(--shadow-md);
+      flex-shrink: 0;
 
       &.passed {
         border-color: var(--success-500);
@@ -130,50 +157,43 @@ import { ApiService } from '../../../core/services/api.service';
         border-color: var(--success-500);
       }
     }
+    .result-meta { color: var(--slate-500); }
   `]
 })
 export class ResultViewComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private api = inject(ApiService);
+  private toast = inject(ToastService);
 
   result = signal<any>(null);
+  isLoading = signal<boolean>(true);
+  private attemptId = '';
 
   ngOnInit(): void {
-    const attemptId = this.route.snapshot.paramMap.get('id');
-    if (attemptId) {
-      this.api.get<any>(`/attempts/${attemptId}/result`).subscribe({
-        next: data => this.result.set(data),
-        error: () => {
-          // Demo fallback
-          this.result.set({
-            score: 10.0,
-            total_points: 10.0,
-            pass_score: 5.0,
-            is_passed: true,
-            exam_title: 'Kiểm Tra Giữa Kỳ - Kiến Trúc Cloud & Serverless',
-            student_name: 'Trần Văn Sinh Viên',
-            answers_released: true,
-            review: [
-              {
-                is_correct: true,
-                awarded_points: 2.5,
-                answer_data: ['opt_b'],
-                questions: {
-                  content: 'Mô hình nào sau đây cho phép nhà phát triển chạy code backend mà không cần quản lý máy chủ vật lý hay container liên tục?',
-                  options: [
-                    { id: 'opt_a', text: 'IaaS (Infrastructure as a Service)' },
-                    { id: 'opt_b', text: 'Serverless Functions / FaaS' },
-                    { id: 'opt_c', text: 'Dedicated Bare-metal Server' },
-                    { id: 'opt_d', text: 'Local VirtualBox' }
-                  ],
-                  correct_answers: ['opt_b']
-                }
-              }
-            ]
-          });
-        }
-      });
+    this.attemptId = this.route.snapshot.paramMap.get('id') || '';
+    if (this.attemptId) {
+      this.loadResult();
+    } else {
+      this.isLoading.set(false);
+      this.toast.error('ID bài thi không hợp lệ.');
+      this.router.navigate(['/exams']);
     }
+  }
+
+  loadResult(): void {
+    this.isLoading.set(true);
+    this.api.get<any>(`/attempts/${this.attemptId}/result`).subscribe({
+      next: data => {
+        this.result.set(data);
+        this.isLoading.set(false);
+      },
+      error: err => {
+        this.isLoading.set(false);
+        const msg = err?.error?.message || 'Không thể tải kết quả bài thi.';
+        this.toast.error(msg);
+      }
+    });
   }
 }
 

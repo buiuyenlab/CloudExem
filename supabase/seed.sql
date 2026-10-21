@@ -1,40 +1,113 @@
 -- ==============================================================================
--- CLOUDEXAM SEED DATA FOR LOCAL DEVELOPMENT / DEMO
+-- CLOUDEXAM SEED DATA FOR SUPABASE
+-- Tạo người dùng mẫu trong auth.users trước, sau đó nạp dữ liệu liên quan
+-- Mật khẩu mặc định cho tất cả tài khoản mẫu là: CloudExam@123
 -- ==============================================================================
 
--- Demo users UUIDs (Simulated Auth Users)
--- Admin: 00000000-0000-0000-0000-000000000001
--- Teacher: 00000000-0000-0000-0000-000000000002
--- Student 1: 00000000-0000-0000-0000-000000000003
--- Student 2: 00000000-0000-0000-0000-000000000004
+-- 1. TẠO CÁC TÀI KHOẢN MẪU TRONG auth.users
+INSERT INTO auth.users (
+    instance_id,
+    id,
+    aud,
+    role,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at
+) VALUES 
+(
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-0000-0000-000000000001',
+    'authenticated',
+    'authenticated',
+    'admin@cloudexam.edu.vn',
+    crypt('CloudExam@123', gen_salt('bf')),
+    NOW(),
+    '{"provider":"email","providers":["email"]}',
+    '{"full_name":"Quản Trị Viên Hệ Thống"}',
+    NOW(),
+    NOW()
+),
+(
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-0000-0000-000000000002',
+    'authenticated',
+    'authenticated',
+    'teacher@cloudexam.edu.vn',
+    crypt('CloudExam@123', gen_salt('bf')),
+    NOW(),
+    '{"provider":"email","providers":["email"]}',
+    '{"full_name":"ThS. Nguyễn Văn Thầy"}',
+    NOW(),
+    NOW()
+),
+(
+    '00000000-0000-0000-0000-000000000003',
+    '00000000-0000-0000-0000-000000000003',
+    'authenticated',
+    'authenticated',
+    'student1@cloudexam.edu.vn',
+    crypt('CloudExam@123', gen_salt('bf')),
+    NOW(),
+    '{"provider":"email","providers":["email"]}',
+    '{"full_name":"Trần Văn Sinh Viên"}',
+    NOW(),
+    NOW()
+),
+(
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-0000-0000-000000000004',
+    'authenticated',
+    'authenticated',
+    'student2@cloudexam.edu.vn',
+    crypt('CloudExam@123', gen_salt('bf')),
+    NOW(),
+    '{"provider":"email","providers":["email"]}',
+    '{"full_name":"Lê Thị Thu Thảo"}',
+    NOW(),
+    NOW()
+)
+ON CONFLICT (id) DO NOTHING;
 
--- 1. Profiles
-INSERT INTO profiles (id, full_name, avatar_url, role, status) VALUES
+-- 2. CẬP NHẬT HOẶC TẠO PROFILES TƯƠNG ỨNG
+-- Tạm thời tắt trigger kiểm tra quyền khi chạy script seed với quyền quản trị viên database
+ALTER TABLE public.profiles DISABLE TRIGGER trg_check_profile_update;
+
+INSERT INTO public.profiles (id, full_name, avatar_url, role, status) VALUES
 ('00000000-0000-0000-0000-000000000001', 'Quản Trị Viên Hệ Thống', 'https://api.dicebear.com/7.x/bottts/svg?seed=admin', 'admin', 'active'),
 ('00000000-0000-0000-0000-000000000002', 'ThS. Nguyễn Văn Thầy', 'https://api.dicebear.com/7.x/avataaars/svg?seed=teacher', 'teacher', 'active'),
 ('00000000-0000-0000-0000-000000000003', 'Trần Văn Sinh Viên', 'https://api.dicebear.com/7.x/avataaars/svg?seed=student1', 'student', 'active'),
 ('00000000-0000-0000-0000-000000000004', 'Lê Thị Thu Thảo', 'https://api.dicebear.com/7.x/avataaars/svg?seed=student2', 'student', 'active')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET 
+    full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role,
+    status = EXCLUDED.status;
 
--- 2. Classes
-INSERT INTO classes (id, name, description, join_code, teacher_id, status) VALUES
+-- Bật lại trigger bảo vệ chống leo thang đặc quyền
+ALTER TABLE public.profiles ENABLE TRIGGER trg_check_profile_update;
+
+-- 3. TẠO LỚP HỌC MẪU
+INSERT INTO public.classes (id, name, description, join_code, teacher_id, status) VALUES
 ('11111111-1111-1111-1111-111111111111', 'Điện Toán Đám Mây - Cloud Computing 2026', 'Lớp học nguyên lý đám mây, AWS, GCP, Vercel và Serverless', 'CLOUD26', '00000000-0000-0000-0000-000000000002', 'active'),
 ('11111111-1111-1111-1111-111111111112', 'Lập Trình Web Nâng Cao - Angular & Express', 'Thực hành phát triển ứng dụng Full-stack hiện đại', 'WEBANG', '00000000-0000-0000-0000-000000000002', 'active')
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Class Members
-INSERT INTO class_members (class_id, student_id) VALUES
+-- 4. THÊM SINH VIÊN VÀO LỚP
+INSERT INTO public.class_members (class_id, student_id) VALUES
 ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000003'),
 ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000004')
 ON CONFLICT DO NOTHING;
 
--- 4. Question Bank
-INSERT INTO question_banks (id, teacher_id, name, description) VALUES
+-- 5. TẠO NGÂN HÀNG CÂU HỎI
+INSERT INTO public.question_banks (id, teacher_id, name, description) VALUES
 ('22222222-2222-2222-2222-222222222221', '00000000-0000-0000-0000-000000000002', 'Ngân Hàng Kiến Trúc Đám Mây & Serverless', 'Bộ câu hỏi trắc nghiệm kiến thức cốt lõi về Cloud, Vercel, Supabase')
 ON CONFLICT (id) DO NOTHING;
 
--- 5. Questions
-INSERT INTO questions (id, bank_id, question_type, content, options, correct_answers, difficulty, default_points) VALUES
+-- 6. TẠO CÂU HỎI MẪU
+INSERT INTO public.questions (id, bank_id, question_type, content, options, correct_answers, difficulty, default_points) VALUES
 (
     '33333333-3333-3333-3333-333333333301',
     '22222222-2222-2222-2222-222222222221',
@@ -95,8 +168,8 @@ INSERT INTO questions (id, bank_id, question_type, content, options, correct_ans
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 6. Exam
-INSERT INTO exams (
+-- 7. TẠO ĐỀ THI MẪU
+INSERT INTO public.exams (
     id, class_id, teacher_id, title, description,
     duration_minutes, start_at, end_at, max_attempts, pass_score,
     shuffle_questions, shuffle_options, status,
@@ -119,11 +192,10 @@ INSERT INTO exams (
     NOW() + INTERVAL '14 days'
 ) ON CONFLICT (id) DO NOTHING;
 
--- 7. Exam Questions
-INSERT INTO exam_questions (exam_id, question_id, points, position) VALUES
+-- 8. GÁN CÂU HỎI VÀO ĐỀ THI
+INSERT INTO public.exam_questions (exam_id, question_id, points, position) VALUES
 ('44444444-4444-4444-4444-444444444441', '33333333-3333-3333-3333-333333333301', 2.50, 1),
 ('44444444-4444-4444-4444-444444444441', '33333333-3333-3333-3333-333333333302', 2.50, 2),
 ('44444444-4444-4444-4444-444444444441', '33333333-3333-3333-3333-333333333303', 2.50, 3),
 ('44444444-4444-4444-4444-444444444441', '33333333-3333-3333-3333-333333333304', 2.50, 4)
 ON CONFLICT DO NOTHING;
-

@@ -24,7 +24,7 @@ import { Exam } from '../../../core/models';
       </div>
 
       <!-- Exams Grid -->
-      <div class="exams-grid">
+      <div class="exams-grid" *ngIf="!isLoading">
         <div *ngFor="let ex of exams()" class="card exam-card card-hover">
           <div class="flex justify-between items-start mb-2">
             <span class="badge" [ngClass]="{
@@ -111,35 +111,22 @@ export class ExamListComponent implements OnInit {
   private router = inject(Router);
 
   exams = signal<Exam[]>([]);
+  isLoading = false;
 
   ngOnInit(): void {
     this.loadExams();
   }
 
   loadExams(): void {
+    this.isLoading = true;
     this.api.get<Exam[]>('/exams').subscribe({
-      next: data => this.exams.set(data || []),
-      error: () => {
-        // Fallback demo exam
-        this.exams.set([
-          {
-            id: '44444444-4444-4444-4444-444444444441',
-            class_id: '11111111-1111-1111-1111-111111111111',
-            teacher_id: '00000000-0000-0000-0000-000000000002',
-            title: 'Kiểm Tra Giữa Kỳ - Kiến Trúc Cloud & Serverless',
-            description: 'Bài thi giữa kỳ kiểm tra kiến thức về Serverless, Supabase PostgreSQL, RLS và Vercel Deployment.',
-            duration_minutes: 30,
-            start_at: new Date(Date.now() - 86400000).toISOString(),
-            end_at: new Date(Date.now() + 14 * 86400000).toISOString(),
-            max_attempts: 2,
-            pass_score: 5.0,
-            shuffle_questions: true,
-            shuffle_options: true,
-            status: 'published',
-            created_at: new Date().toISOString(),
-            classes: { name: 'Điện Toán Đám Mây 2026' }
-          }
-        ]);
+      next: data => {
+        this.exams.set(data || []);
+        this.isLoading = false;
+      },
+      error: err => {
+        this.isLoading = false;
+        this.toast.error('Không thể tải danh sách kỳ thi. Vui lòng thử lại.');
       }
     });
   }
@@ -152,8 +139,8 @@ export class ExamListComponent implements OnInit {
         this.router.navigate(['/exam-taking', attempt.id]);
       },
       error: err => {
-        // In demo mode if API is mocking, navigate with demo attempt ID
-        this.router.navigate(['/exam-taking', 'demo-attempt-id']);
+        const msg = err?.error?.message || 'Không thể bắt đầu bài thi. Vui lòng thử lại.';
+        this.toast.error(msg);
       }
     });
   }
