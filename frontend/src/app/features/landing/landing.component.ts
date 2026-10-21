@@ -31,12 +31,12 @@ import { AuthService } from '../../core/services/auth.service';
         </p>
 
         <div class="hero-cta">
-          <button (click)="authService.loginAsDemo('teacher')" class="btn btn-primary" style="padding: 0.875rem 1.75rem; font-size: 1rem;">
-            Trải nghiệm vai trò Giáo viên
-          </button>
-          <button (click)="authService.loginAsDemo('student')" class="btn btn-secondary" style="padding: 0.875rem 1.75rem; font-size: 1rem;">
-            Trải nghiệm vai trò Sinh viên
-          </button>
+          <a routerLink="/auth/login" class="btn btn-primary" style="padding: 0.875rem 1.75rem; font-size: 1rem;">
+            Đăng nhập hệ thống &rarr;
+          </a>
+          <a routerLink="/auth/register" class="btn btn-secondary" style="padding: 0.875rem 1.75rem; font-size: 1rem;">
+            Đăng ký tài khoản mới
+          </a>
         </div>
       </header>
 

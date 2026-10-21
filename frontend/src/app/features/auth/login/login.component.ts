@@ -39,16 +39,17 @@ import { ToastService } from '../../../core/services/toast.service';
         </button>
       </form>
 
-      <!-- Fast Demo Role Login -->
+      <!-- Fast Account Autofill (Real DB Accounts) -->
       <div class="demo-section">
         <div class="divider">
-          <span>HOẶC TRẢI NGHIỆM NHANH (DEMO)</span>
+          <span>TÀI KHOẢN MẪU ĐÃ CẤP SẴN</span>
         </div>
         <div class="demo-buttons">
-          <button (click)="authService.loginAsDemo('admin')" type="button" class="btn btn-secondary btn-sm flex-1">Admin</button>
-          <button (click)="authService.loginAsDemo('teacher')" type="button" class="btn btn-secondary btn-sm flex-1">Giáo viên</button>
-          <button (click)="authService.loginAsDemo('student')" type="button" class="btn btn-secondary btn-sm flex-1">Sinh viên</button>
+          <button (click)="fillCredentials('admin@cloudexam.edu.vn')" type="button" class="btn btn-secondary btn-sm flex-1">Admin</button>
+          <button (click)="fillCredentials('teacher@cloudexam.edu.vn')" type="button" class="btn btn-secondary btn-sm flex-1">Giáo viên</button>
+          <button (click)="fillCredentials('student1@cloudexam.edu.vn')" type="button" class="btn btn-secondary btn-sm flex-1">Sinh viên</button>
         </div>
+        <p class="text-xs text-center text-muted mt-2">Mật khẩu mặc định: <code>CloudExam&#64;123</code></p>
       </div>
 
       <div class="auth-footer">
@@ -116,6 +117,13 @@ export class LoginComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]]
   });
+
+  fillCredentials(email: string): void {
+    this.loginForm.patchValue({
+      email,
+      password: 'CloudExam@123'
+    });
+  }
 
   async onSubmit(): Promise<void> {
     if (this.loginForm.invalid) return;
